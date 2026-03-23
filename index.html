@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NASA Space Explorer — APOD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:ital,wght@0,300;0,400;0,500;1,300&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --nb:#0b3d91;--nb2:#1756c8;--nb3:#3370e0;
+  --nr:#fc3d21;--nr2:#e83318;
+  --void:#03070f;--deep:#050c1c;--mid:#081428;
+  --card:#0c1d3a;--card2:#112244;
+  --rim:#1c3a6a;--rim2:#2a4e8a;
+  --prose:#cad8f4;--mute:#6a90c0;--dim:#324e72;
+  --fd:'Barlow Condensed',sans-serif;
+  --fb:'Barlow',sans-serif;
+  --fm:'Share Tech Mono',monospace;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--void);color:var(--prose);font-family:var(--fb);min-height:100vh;overflow-x:hidden}
+
+/* Canvas */
+#cosmos{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* Header */
+.hdr{position:sticky;top:0;z-index:100;background:rgba(3,7,15,.9);border-bottom:1px solid rgba(28,58,106,.65);backdrop-filter:blur(18px)}
+.hdr-inner{max-width:1280px;margin:0 auto;padding:.9rem 2rem;display:flex;align-items:center;gap:1.4rem}
+.logo{width:88px;height:auto;flex-shrink:0;filter:drop-shadow(0 0 10px rgba(252,61,33,.35))}
+.hdr-copy{border-left:2px solid var(--nb2);padding-left:1.2rem}
+.hdr-title{font-family:var(--fd);font-weight:900;font-size:clamp(1.6rem,3.5vw,2.4rem);letter-spacing:.12em;text-transform:uppercase;color:#fff;line-height:1;text-shadow:0 0 30px rgba(55,100,220,.5)}
+.hdr-sub{font-family:var(--fm);font-size:.68rem;color:var(--nr);letter-spacing:.22em;text-transform:uppercase;margin-top:.28rem}
+
+/* Ticker */
+.ticker{background:linear-gradient(90deg,#0a2a6e,#0f3690 50%,#0a2a6e);border-bottom:1px solid rgba(55,100,220,.2);padding:.55rem 2rem;display:flex;align-items:center;gap:.75rem;overflow:hidden;position:relative;z-index:10}
+.ticker-pill{font-family:var(--fd);font-weight:700;font-size:.7rem;letter-spacing:.2em;color:var(--nr);background:rgba(252,61,33,.12);border:1px solid rgba(252,61,33,.3);padding:.2rem .6rem;border-radius:2px;flex-shrink:0}
+.ticker-txt{font-family:var(--fb);font-style:italic;font-size:.85rem;color:rgba(255,255,255,.88);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Controls */
+.ctrl{background:linear-gradient(180deg,rgba(8,20,40,.97),rgba(5,12,28,.97));border-bottom:1px solid var(--rim);padding:2rem 0;position:relative;z-index:10}
+.ctrl-inner{max-width:1280px;margin:0 auto;padding:0 2rem;display:flex;align-items:flex-end;gap:1.5rem;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:.45rem}
+.field label{font-family:var(--fd);font-weight:700;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--mute)}
+.field input[type=date]{background:var(--card);border:1.5px solid var(--rim);color:var(--prose);font-family:var(--fm);font-size:.92rem;padding:.62rem 1rem;border-radius:5px;cursor:pointer;transition:border-color .2s,box-shadow .2s;min-width:158px}
+.field input[type=date]:focus{outline:none;border-color:var(--nb2);box-shadow:0 0 0 3px rgba(23,86,200,.22)}
+.field input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.6) sepia(1) saturate(6) hue-rotate(175deg);cursor:pointer;opacity:.8}
+.sep{font-size:1.3rem;color:var(--dim);padding-bottom:.4rem;align-self:flex-end}
+.go{display:flex;align-items:center;gap:.6rem;background:var(--nr);color:#fff;border:none;font-family:var(--fd);font-weight:800;font-size:1.05rem;letter-spacing:.1em;text-transform:uppercase;padding:.7rem 2rem;border-radius:5px;cursor:pointer;transition:background .2s,transform .15s,box-shadow .2s;box-shadow:0 4px 24px rgba(252,61,33,.3);position:relative;overflow:hidden}
+.go::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.13) 0%,transparent 55%);pointer-events:none}
+.go:hover{background:var(--nr2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(252,61,33,.5)}
+.go:active{transform:translateY(0)}
+.go:disabled{opacity:.55;cursor:not-allowed;transform:none}
+
+/* Main */
+.main{position:relative;z-index:5;padding:2.5rem 0 5rem}
+.wrap{max-width:1280px;margin:0 auto;padding:0 2rem}
+
+/* Placeholder */
+.ph{display:flex;align-items:center;justify-content:center;min-height:52vh;text-align:center}
+.ph-inner{display:flex;flex-direction:column;align-items:center;gap:2.2rem}
+.orb{width:130px;height:130px;border-radius:50%;position:relative;background:radial-gradient(circle at 38% 32%,#2a5dcc 0%,#0e2870 45%,#060f2a 75%,#020710 100%);box-shadow:0 0 60px rgba(23,86,200,.28),inset -18px -12px 40px rgba(0,0,0,.5),inset 6px 6px 24px rgba(100,160,255,.12);animation:float 7s ease-in-out infinite}
+.orb::before{content:'';position:absolute;width:185px;height:34px;border:2px solid rgba(100,160,255,.17);border-radius:50%;top:48px;left:-27px;transform:rotate(-14deg)}
+.orb::after{content:'';position:absolute;width:165px;height:26px;border:1px solid rgba(100,160,255,.09);border-radius:50%;top:52px;left:-17px;transform:rotate(-14deg)}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-18px)}}
+.ph-txt{font-size:1rem;color:var(--mute);line-height:1.75}
+.ph-txt strong{color:var(--prose)}
+
+/* Loading */
+.ld{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:42vh;gap:1.4rem;text-align:center}
+.ring{width:64px;height:64px;border:3px solid var(--rim);border-top-color:var(--nb2);border-right-color:var(--nr);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ld-h{font-family:var(--fd);font-weight:700;font-size:1.2rem;letter-spacing:.06em;color:var(--prose)}
+.ld-s{font-family:var(--fm);font-size:.75rem;color:var(--dim);letter-spacing:.1em}
+
+/* Error */
+.er{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:32vh;gap:1rem;text-align:center}
+.er-ico{font-size:2.8rem}
+.er-txt{font-size:.95rem;color:var(--nr);max-width:420px;line-height:1.6}
+
+/* Gallery */
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:1.5rem}
+.card{background:var(--card);border:1px solid var(--rim);border-radius:8px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:transform .28s var(--ease),border-color .28s,box-shadow .28s;animation:cIn .45s var(--ease) both}
+.card:hover{transform:translateY(-7px) scale(1.018);border-color:var(--nb2);box-shadow:0 16px 48px rgba(23,86,200,.25),0 0 0 1px var(--nb2)}
+@keyframes cIn{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+.card-img{width:100%;aspect-ratio:16/10;overflow:hidden;background:var(--mid)}
+.card-img img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s var(--ease)}
+.card:hover .card-img img{transform:scale(1.09)}
+.card-vid{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6rem;background:linear-gradient(135deg,#091838,#03070f)}
+.cvico{font-size:2.4rem;opacity:.7}
+.cvlbl{font-family:var(--fm);font-size:.65rem;color:var(--mute);letter-spacing:.12em}
+.card-body{padding:1rem 1.1rem;display:flex;flex-direction:column;gap:.35rem;flex:1}
+.card-date{font-family:var(--fm);font-size:.66rem;color:var(--nr);letter-spacing:.12em;text-transform:uppercase}
+.card-title{font-family:var(--fd);font-weight:700;font-size:1.02rem;color:#fff;line-height:1.3}
+/* stagger */
+.card:nth-child(1){animation-delay:.04s}.card:nth-child(2){animation-delay:.08s}.card:nth-child(3){animation-delay:.12s}
+.card:nth-child(4){animation-delay:.16s}.card:nth-child(5){animation-delay:.2s}.card:nth-child(6){animation-delay:.24s}
+.card:nth-child(7){animation-delay:.28s}.card:nth-child(8){animation-delay:.32s}.card:nth-child(9){animation-delay:.36s}
+.card:nth-child(10){animation-delay:.4s}.card:nth-child(11){animation-delay:.44s}.card:nth-child(12){animation-delay:.48s}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(2,5,14,.9);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1.25rem;backdrop-filter:blur(8px);animation:fIn .22s var(--ease)}
+.overlay.hidden{display:none!important}
+@keyframes fIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--card);border:1px solid var(--rim2);border-radius:10px;max-width:880px;width:100%;max-height:92vh;overflow-y:auto;position:relative;box-shadow:0 24px 90px rgba(0,0,0,.85),0 0 0 1px rgba(55,100,220,.18);animation:mIn .28s var(--ease);scrollbar-width:thin;scrollbar-color:var(--rim) transparent}
+@keyframes mIn{from{opacity:0;transform:scale(.95) translateY(12px)}to{opacity:1;transform:none}}
+.mclose{position:sticky;top:.75rem;float:right;margin:.75rem .75rem 0 0;background:rgba(252,61,33,.15);border:1px solid rgba(252,61,33,.35);color:#fff;font-size:.95rem;width:38px;height:38px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,transform .18s;z-index:5}
+.mclose:hover{background:var(--nr);transform:rotate(90deg)}
+.m-media{width:100%;clear:both;background:var(--deep)}
+.m-media img{width:100%;max-height:480px;object-fit:contain;display:block}
+.m-media iframe{width:100%;aspect-ratio:16/9;border:none;display:block}
+.m-vlink{padding:3rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1.2rem}
+.m-vlink-ico{font-size:3rem;opacity:.7}
+.vbtn{display:inline-flex;align-items:center;gap:.5rem;background:var(--nr);color:#fff;text-decoration:none;font-family:var(--fd);font-weight:800;font-size:.95rem;letter-spacing:.08em;text-transform:uppercase;padding:.65rem 1.6rem;border-radius:5px;transition:background .2s,transform .15s}
+.vbtn:hover{background:var(--nr2);transform:translateY(-2px)}
+.m-info{padding:1.75rem 2rem 2.25rem}
+.m-tag{display:inline-block;font-family:var(--fm);font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--nr);background:rgba(252,61,33,.1);border:1px solid rgba(252,61,33,.25);padding:.2rem .65rem;border-radius:2px;margin-bottom:.75rem}
+.m-title{font-family:var(--fd);font-weight:800;font-size:clamp(1.4rem,3vw,2.1rem);color:#fff;line-height:1.15;letter-spacing:.03em;border-left:3px solid var(--nb2);padding-left:1rem;margin-bottom:1.3rem}
+.m-body{font-weight:300;font-size:.93rem;color:var(--mute);line-height:1.85;margin-bottom:1rem}
+.m-credit{font-family:var(--fm);font-size:.7rem;color:var(--dim);letter-spacing:.05em}
+
+.hidden{display:none!important}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--void)}::-webkit-scrollbar-thumb{background:var(--rim);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--nb2)}
+
+@media(max-width:680px){
+  .hdr-inner,.ctrl-inner,.wrap{padding-left:1rem;padding-right:1rem}
+  .logo{width:66px}.hdr-title{font-size:1.4rem}
+  .ctrl-inner{gap:1rem}.sep{display:none}
+  .field input[type=date]{min-width:unset;width:100%}.field{width:100%}
+  .go{width:100%;justify-content:center}
+  .gallery{grid-template-columns:1fr}.m-info{padding:1.25rem}
+}
+</style>
+</head>
+<body>
+
+<canvas id="cosmos"></canvas>
+
+<header class="hdr">
+  <div class="hdr-inner">
+    <svg class="logo" viewBox="0 0 220 88" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="110" cy="44" rx="105" ry="40" fill="#0b3d91"/>
+      <text x="110" y="58" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="900" font-size="44" fill="white" letter-spacing="5">NASA</text>
+      <ellipse cx="110" cy="44" rx="105" ry="40" fill="none" stroke="#fc3d21" stroke-width="3.5"/>
+      <line x1="5" y1="44" x2="215" y2="44" stroke="#fc3d21" stroke-width="2.5"/>
+    </svg>
+    <div class="hdr-copy">
+      <h1 class="hdr-title">Space Explorer</h1>
+      <p class="hdr-sub">Astronomy Picture of the Day</p>
+    </div>
+  </div>
+</header>
+
+<div class="ticker">
+  <span style="font-size:1rem;flex-shrink:0">🌌</span>
+  <span class="ticker-pill">DID YOU KNOW</span>
+  <span class="ticker-txt" id="factTxt"></span>
+</div>
+
+<section class="ctrl">
+  <div class="ctrl-inner">
+    <div class="field">
+      <label>📅 Start Date</label>
+      <input type="date" id="startDate"/>
+    </div>
+    <div class="sep">→</div>
+    <div class="field">
+      <label>📅 End Date</label>
+      <input type="date" id="endDate"/>
+    </div>
+    <button class="go" id="goBtn">🚀&nbsp; Get Space Images</button>
+  </div>
+</section>
+
+<main class="main">
+  <div class="wrap">
+    <div class="ld hidden" id="ldState">
+      <div class="ring"></div>
+      <p class="ld-h">🔄 Loading space photos…</p>
+      <p class="ld-s">Fetching data from NASA's archives</p>
+    </div>
+    <div class="er hidden" id="erState">
+      <p class="er-ico">⚠️</p>
+      <p class="er-txt" id="erTxt"></p>
+    </div>
+    <div class="ph" id="phState">
+      <div class="ph-inner">
+        <div class="orb"></div>
+        <p class="ph-txt">Pick a date range and press <strong>Get Space Images</strong><br>to explore NASA's cosmic archive</p>
+      </div>
+    </div>
+    <div class="gallery hidden" id="gallery"></div>
+  </div>
+</main>
+
+<div class="overlay hidden" id="overlay">
+  <div class="modal">
+    <button class="mclose" id="mClose" aria-label="Close">✕</button>
+    <div class="m-media" id="mMedia"></div>
+    <div class="m-info">
+      <span class="m-tag" id="mDate"></span>
+      <h2 class="m-title" id="mTitle"></h2>
+      <p class="m-body" id="mBody"></p>
+      <p class="m-credit" id="mCredit"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── CONFIG ── Replace with your key from api.nasa.gov ── */
+const API_KEY = 'DEMO_KEY';
+const APOD    = 'https://api.nasa.gov/planetary/apod';
+const MIN_D   = '1995-06-16';
+
+/* ── FACTS ── */
+const FACTS = [
+  "A neutron star packs more mass than the Sun into a sphere just ~20 km across.",
+  "The Milky Way is estimated to contain over 400 billion stars.",
+  "One day on Venus lasts longer than a full Venusian year.",
+  "There are more stars in the universe than grains of sand on all Earth's beaches.",
+  "Jupiter's Great Red Spot is a storm that has raged for over 350 years.",
+  "Light leaving the Sun takes about 8 minutes and 20 seconds to reach Earth.",
+  "Saturn's rings are mostly water ice and are less than 100 meters thick in places.",
+  "Apollo footprints on the Moon could last 100 million years—there's no wind to erase them.",
+  "Olympus Mons on Mars is nearly 3× the height of Mount Everest.",
+  "The observable universe spans roughly 93 billion light-years in diameter.",
+  "Voyager 1, launched 1977, is the most distant human-made object from Earth.",
+  "A teaspoon of white dwarf material would weigh about 5 tons on Earth.",
+  "Andromeda Galaxy will collide with the Milky Way in ~4.5 billion years.",
+  "Pluto has a heart-shaped nitrogen glacier roughly the size of Texas and Oklahoma combined.",
+  "On Mars, sunsets glow blue due to the way iron-oxide dust scatters sunlight.",
+  "A molecular cloud near our galaxy's center contains ethyl formate—which smells like raspberries.",
+  "The Sun converts about 4 million tons of mass into energy every second.",
+  "There are likely more planets in the Milky Way than there are stars.",
+  "Black holes don't suck—objects must cross the event horizon before escape becomes impossible.",
+  "The universe is approximately 13.8 billion years old.",
+];
+
+/* ── STARFIELD ── */
+(function(){
+  const c=document.getElementById('cosmos'),ctx=c.getContext('2d');
+  let W,H,pts;
+  function make(){
+    W=c.width=innerWidth; H=c.height=innerHeight;
+    pts=Array.from({length:260},()=>({
+      x:Math.random()*W, y:Math.random()*H,
+      r:Math.random()*1.4+.3,
+      a:Math.random(), da:(Math.random()*.008+.002)*(Math.random()<.5?1:-1)
+    }));
+  }
+  function tick(){
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(p=>{
+      p.a+=p.da; if(p.a>1||p.a<0)p.da*=-1;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,220,255,${p.a.toFixed(2)})`; ctx.fill();
+    });
+    requestAnimationFrame(tick);
+  }
+  make(); tick();
+  addEventListener('resize',make);
+})();
+
+/* ── FACT ── */
+document.getElementById('factTxt').textContent=FACTS[Math.floor(Math.random()*FACTS.length)];
+
+/* ── DATES ── */
+function today(){const d=new Date(),y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return`${y}-${m}-${dd}`}
+function daysAgo(n){const d=new Date();d.setDate(d.getDate()-n);const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return`${y}-${m}-${dd}`}
+
+const sEl=document.getElementById('startDate'),eEl=document.getElementById('endDate'),td=today();
+sEl.min=eEl.min=MIN_D; sEl.max=eEl.max=td;
+sEl.value=daysAgo(7); eEl.value=td;
+
+function validate(s,e){
+  if(!s||!e) return'Please select both a start and end date.';
+  if(s<MIN_D) return`APOD starts ${MIN_D} — pick a later start date.`;
+  if(e>td) return"End date can't be in the future.";
+  if(s>e) return'Start date must be on or before end date.';
+  if((new Date(e)-new Date(s))/864e5>365) return'Please limit the range to 365 days or fewer.';
+  return null;
+}
+
+/* ── UI STATE ── */
+const ldEl=document.getElementById('ldState'),erEl=document.getElementById('erState'),
+      phEl=document.getElementById('phState'),galEl=document.getElementById('gallery');
+function show(el){[ldEl,erEl,phEl,galEl].forEach(x=>x.classList.add('hidden'));el.classList.remove('hidden')}
+
+/* ── FETCH ── */
+const goBtn=document.getElementById('goBtn');
+goBtn.addEventListener('click',async()=>{
+  const s=sEl.value,e=eEl.value,err=validate(s,e);
+  if(err){show(erEl);document.getElementById('erTxt').textContent=err;return}
+  show(ldEl); goBtn.disabled=true; goBtn.textContent='Loading…';
+  try{
+    const res=await fetch(`${APOD}?api_key=${API_KEY}&start_date=${s}&end_date=${e}&thumbs=true`);
+    if(!res.ok){const j=await res.json().catch(()=>({}));throw new Error(j.msg||`API error ${res.status}`)}
+    const data=await res.json();
+    const items=Array.isArray(data)?data:[data];
+    if(!items.length){show(erEl);document.getElementById('erTxt').textContent='No results found.';return}
+    buildGallery(items); show(galEl);
+  }catch(ex){
+    console.error(ex); show(erEl);
+    document.getElementById('erTxt').textContent='Failed to load: '+ex.message;
+  }finally{
+    goBtn.disabled=false; goBtn.innerHTML='🚀&nbsp; Get Space Images';
+  }
+});
+
+/* ── GALLERY ── */
+function buildGallery(items){
+  galEl.innerHTML='';
+  items.forEach(item=>{
+    const isV=item.media_type==='video',thumb=isV?(item.thumbnail_url||null):item.url;
+    const card=document.createElement('div');
+    card.className='card'; card.tabIndex=0; card.setAttribute('role','button'); card.setAttribute('aria-label',item.title);
+    let media;
+    if(isV&&thumb) media=`<div class="card-img"><img src="${x(thumb)}" alt="${x(item.title)}" loading="lazy"/></div>`;
+    else if(isV)   media=`<div class="card-img"><div class="card-vid"><div class="cvico">🎬</div><span class="cvlbl">VIDEO ENTRY</span></div></div>`;
+    else           media=`<div class="card-img"><img src="${x(item.url)}" alt="${x(item.title)}" loading="lazy"/></div>`;
+    card.innerHTML=`${media}<div class="card-body"><span class="card-date">${fmt(item.date)}</span><h3 class="card-title">${x(item.title)}</h3></div>`;
+    card.addEventListener('click',()=>openM(item));
+    card.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();openM(item)}});
+    galEl.appendChild(card);
+  });
+}
+
+/* ── MODAL ── */
+const overlay=document.getElementById('overlay'),mClose=document.getElementById('mClose');
+mClose.addEventListener('click',closeM);
+overlay.addEventListener('click',ev=>{if(ev.target===overlay)closeM()});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape')closeM()});
+
+function openM(item){
+  const isV=item.media_type==='video',mMedia=document.getElementById('mMedia');
+  mMedia.innerHTML='';
+  if(isV){
+    const em=ytEmbed(item.url);
+    if(em) mMedia.innerHTML=`<iframe src="${em}" allowfullscreen title="${x(item.title)}"></iframe>`;
+    else   mMedia.innerHTML=`<div class="m-vlink"><div class="m-vlink-ico">🎬</div><p style="color:var(--mute);font-size:.9rem">This entry is a video.</p><a href="${x(item.url)}" target="_blank" rel="noopener" class="vbtn">▶ Watch Video</a></div>`;
+  } else {
+    mMedia.innerHTML=`<img src="${x(item.hdurl||item.url)}" alt="${x(item.title)}"/>`;
+  }
+  document.getElementById('mDate').textContent=fmt(item.date);
+  document.getElementById('mTitle').textContent=item.title;
+  document.getElementById('mBody').textContent=item.explanation;
+  document.getElementById('mCredit').textContent=item.copyright?`© ${item.copyright}`:'';
+  overlay.classList.remove('hidden');
+  document.body.style.overflow='hidden';
+  setTimeout(()=>mClose.focus(),50);
+}
+function closeM(){overlay.classList.add('hidden');document.body.style.overflow=''}
+
+/* ── HELPERS ── */
+function ytEmbed(url){if(!url)return null;const p=[/youtube\.com\/watch\?v=([A-Za-z0-9_-]+)/,/youtu\.be\/([A-Za-z0-9_-]+)/,/youtube\.com\/embed\/([A-Za-z0-9_-]+)/];for(const r of p){const m=url.match(r);if(m)return`https://www.youtube.com/embed/${m[1]}`}return null}
+function fmt(s){if(!s)return'';const[y,m,d]=s.split('-'),mo=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];return`${d} ${mo[+m-1]} ${y}`}
+function x(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+</script>
+</body>
+</html>
